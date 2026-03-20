@@ -84,7 +84,11 @@ Args:
   - query (string): Search keyword (product name, category, etc.)
   - response_format: Output format
 
-Returns matching products sorted by relevance. Product URLs: https://{subdomain}.blanxer.com/product/{slug}`,
+Returns matching products sorted by relevance. Product URLs: https://{subdomain}.blanxer.com/product/{slug}
+
+## Task 7 — Find and Update a Specific Product
+Step 1 (this tool): Search by product name keyword → note the product _id
+Step 2: blanxer_update_product with the _id and fields to change (e.g. price)`,
       inputSchema: ResponseFormatSchema.extend({
         query: z.string().min(2).max(200).describe("Search keyword"),
       }).strict(),
@@ -205,11 +209,16 @@ Args:
   - quantity (number): Initial stock quantity
   - in_stock (boolean): Whether product is available
   - description (string): Short description (HTML supported)
-  - categories (string[]): Category names
+  - categories (string[]): Category names (use IDs from blanxer_list_categories)
   - channel (number): 1=Online, 2=POS (default 1)
   - image_urls (string[]): Image URLs (upload first via blanxer_upload_file)
 
-Returns created product. Note: Upload images first using blanxer_upload_file.`,
+Returns created product.
+
+## Task 3 — Create a New Product with Images
+Step 1: Upload each image via blanxer_upload_file (multipart, file_purpose='bulk') → save returned url
+Step 2: blanxer_list_categories → find the correct category _id
+Step 3 (this tool): Create product with image_urls from step 1 and categories from step 2`,
       inputSchema: z.object({
         name: z.string().min(1).max(200).describe("Product name"),
         slug: z.string().min(1).max(200).describe("URL slug (unique, e.g. 'premium-t-shirt')"),
@@ -266,7 +275,16 @@ Args:
   - quantity (number): New stock quantity
   - image_urls (string[]): Replace image URLs
 
-Returns confirmation.`,
+Returns confirmation.
+
+## Task 4 — Bulk Update Product Prices
+Step 1: blanxer_list_products → get all products with their current prices
+Step 2: Calculate new prices (e.g. new_price = Math.round(price * 1.10) for 10% increase)
+Step 3 (this tool): Call once per product with { product_id, price: new_price }
+
+## Task 7 — Update a Specific Product
+Step 1: blanxer_search_products to find the product → note _id
+Step 2 (this tool): Update with the desired fields`,
       inputSchema: z.object({
         product_id: z.string().describe("Product _id to update"),
         name: z.string().optional().describe("New product name"),

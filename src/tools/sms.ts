@@ -45,7 +45,13 @@ Args:
   - numbers (string[]): Array of phone numbers to send to (e.g. ['9841234567', '9851234567'])
 
 Important: Check blanxer_check_sms_credits first to ensure sufficient balance.
-Returns confirmation.`,
+Returns confirmation.
+
+## Task 2 — Promotional SMS Campaign (Step 4 of 4)
+Step 1: blanxer_check_sms_credits → verify remaining > 0
+Step 2: blanxer_list_orders with status=Delivered, then status=Processing, then status=Shipped
+Step 3: Extract and deduplicate all customer_phone_number values
+Step 4 (this tool): Send with deduplicated numbers array`,
       inputSchema: z.object({
         message: z.string().min(1).max(480)
           .describe("SMS message text (under 160 chars = 1 credit per number)"),

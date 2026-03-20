@@ -62,11 +62,14 @@ app.post("/mcp", async (c) => {
   const env = c.env;
 
   // 1. Extract Blanxer API key
+  // Priority: query param > X-Blanxer-Api-Key header > Authorization Bearer > env var
   let blanxerApiKey: string | undefined;
 
-  const xHeader = c.req.header("x-blanxer-api-key");
-  if (xHeader) {
-    blanxerApiKey = xHeader;
+  const queryKey = c.req.query("api_key");
+  if (queryKey) {
+    blanxerApiKey = queryKey;
+  } else if (c.req.header("x-blanxer-api-key")) {
+    blanxerApiKey = c.req.header("x-blanxer-api-key");
   } else {
     const authHeader = c.req.header("authorization") ?? "";
 

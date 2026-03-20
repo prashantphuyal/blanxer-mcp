@@ -2,10 +2,7 @@
   "mcpServers": {
     "blanxer": {
       "type": "http",
-      "url": "https://mcp.prashantphuyal.com/mcp",
-      "headers": {
-        "X-Blanxer-Api-Key": "${BLANXER_API_KEY}"
-      }
+      "url": "https://mcp.prashantphuyal.com/mcp?api_key=sk_652b9138aebd132f108cb75f695edf753e3c34c50f32f568wm_-0hb3"
     }
   }
 }

@@ -18,12 +18,27 @@ export function registerOrderTools(server: McpServer): void {
 
 Args:
   - status: Filter by order status (Pending|Processing|Shipped|Delivered|Cancelled|Returned)
-  - from: Start date filter in ISO 8601 format (e.g. 2026-01-01). Max 30-day range recommended.
-  - to: End date filter in ISO 8601 format (e.g. 2026-01-31)
+  - from: Start date ISO 8601 (e.g. 2026-01-01). Max 30-day range recommended.
+  - to: End date ISO 8601 (e.g. 2026-01-31)
   - label: Optional label filter
   - response_format: 'markdown' or 'json'
 
-Returns array of orders with customer info, product totals, payment details.`,
+Returns array of orders with customer info, product totals, payment details.
+
+## Task 1 — Today's Order Summary
+Call this tool 3 times (no date filter needed for today):
+1. status=Pending → count pending orders
+2. status=Processing → count processing orders
+3. status=Delivered → count delivered orders, sum product_total_price for revenue
+For a quick single-call summary, use blanxer_get_dashboard instead.
+
+## Task 2 — SMS Campaign: Collect Customer Numbers
+Call with status=Delivered, then status=Processing, then status=Shipped.
+Extract customer_phone_number from each list and deduplicate before passing to blanxer_send_bulk_sms.
+
+## Task 8 — Ship Pending Orders via Pathao
+Call with status=Pending to get all unshipped orders.
+Then call blanxer_create_pathao_shipment for each order using its customer details.`,
       inputSchema: ResponseFormatSchema.extend({
         status: z.enum(ORDER_STATUSES).optional()
           .describe("Filter by order status"),
@@ -152,7 +167,14 @@ Args:
   - item_weight (number): Weight in kg
   - amount_to_collect (number): COD amount to collect (0 for prepaid)
 
-Returns Pathao shipment confirmation.`,
+Returns Pathao shipment confirmation.
+
+## Task 8 — Ship All Pending Orders via Pathao
+Step 1: blanxer_list_orders with status=Pending
+Step 2: For each order, call this tool using:
+  - recipient_name = customer_full_name
+  - recipient_phone = customer_phone_number
+  - amount_to_collect = cod_amount (use 0 for prepaid orders)`,
       inputSchema: z.object({
         order_id: z.string().describe("Order _id"),
         recipient_name: z.string().describe("Recipient full name"),

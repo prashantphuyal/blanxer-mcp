@@ -14,7 +14,14 @@ export function registerAnalyticsTools(server: McpServer): void {
       title: "Get Dashboard Summary",
       description: `Get today's store dashboard summary: order counts, revenue, and fulfillment status breakdown.
 
-Returns today's orders, revenue, and counts for Pending/Processing/Delivered orders.`,
+Returns today's orders, revenue, and counts for Pending/Processing/Delivered orders.
+
+## Task 6 — Daily Sales Report (Step 2 of 5)
+Use this as the first data call in a daily report:
+Step 1 (this tool): Quick summary — today's order count + revenue + status breakdown
+Step 2: blanxer_get_sales_analytics with from=YYYY-MM-DDT00:00:00 and to=YYYY-MM-DDT23:59:59 for detailed breakdown
+Step 3: blanxer_list_orders with status=Pending for orders needing attention
+Then compile all three into a structured report.`,
       inputSchema: ResponseFormatSchema.strict(),
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
@@ -53,13 +60,19 @@ Returns today's orders, revenue, and counts for Pending/Processing/Delivered ord
       description: `Get detailed sales analytics for a date range.
 
 Args:
-  - from (string): Start date ISO 8601 (e.g. 2026-01-01)
-  - to (string): End date ISO 8601 (e.g. 2026-01-31)
+  - from (string): Start datetime ISO 8601 — use full format with time for accuracy (e.g. 2026-03-20T00:00:00)
+  - to (string): End datetime ISO 8601 — use full format with time for accuracy (e.g. 2026-03-20T23:59:59)
   - outlet (string): Outlet ID or 'all' (default 'all')
   - mode (number): Analytics mode (default 1)
   - response_format: Output format
 
-Returns revenue, order count, average order value, top products, and daily breakdown.`,
+Returns revenue, order count, average order value, top products, and daily breakdown.
+
+## Task 6 — Daily Sales Report (Step 3 of 5)
+For today's full report use:
+  from = YYYY-MM-DDT00:00:00 (start of today)
+  to   = YYYY-MM-DDT23:59:59 (end of today)
+  outlet = 'all', mode = 1`,
       inputSchema: ResponseFormatSchema.extend({
         from: z.string().describe("Start date ISO 8601 (e.g. 2026-01-01)"),
         to: z.string().describe("End date ISO 8601 (e.g. 2026-01-31)"),

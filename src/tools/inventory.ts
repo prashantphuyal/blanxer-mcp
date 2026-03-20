@@ -58,7 +58,12 @@ Args:
   - variant_id (string): Variant _id (optional — only for products with variants)
   - note (string): Reason for stock-in (e.g. 'Restocked from supplier', 'Manual correction')
 
-Returns confirmation.`,
+Returns confirmation.
+
+## Task 5 — Restock Low-Inventory Products (Step 4 of 4)
+Step 1: blanxer_list_products → filter products where quantity < threshold (e.g. 5)
+Step 2: blanxer_list_outlets → find the default outlet (is_default=true), save its _id
+Step 3 (this tool): For each low-stock product call stock-in with the default outlet_id`,
       inputSchema: z.object({
         product_id: z.string().describe("Product _id"),
         outlet_id: z.string().describe("Outlet _id (from blanxer_list_outlets)"),
