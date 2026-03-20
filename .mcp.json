@@ -2,7 +2,7 @@
   "mcpServers": {
     "blanxer": {
       "type": "http",
-      "url": "https://blanxer-mcp.prashant-phuyal-pp.workers.dev/mcp",
+      "url": "https://mcp.prashantphuyal.com/mcp",
       "headers": {
         "X-Blanxer-Api-Key": "${BLANXER_API_KEY}"
       }

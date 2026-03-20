@@ -2,6 +2,11 @@ name = "blanxer-mcp"
 main = "src/worker.ts"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
+account_id = "fe9b0cbe474acce65b8531f6009cda67"
+
+routes = [
+  { pattern = "mcp.prashantphuyal.com", custom_domain = true }
+]
 
 [vars]
 TRANSPORT = "workers"
