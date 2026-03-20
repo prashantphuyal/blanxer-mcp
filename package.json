@@ -8,7 +8,9 @@
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist dist-workers",
+    "workers:dev": "wrangler dev src/worker.ts",
+    "workers:deploy": "wrangler deploy src/worker.ts"
   },
   "engines": {
     "node": ">=18"
@@ -18,11 +20,14 @@
     "@types/express": "^5.0.6",
     "axios": "^1.7.9",
     "express": "^5.2.1",
+    "hono": "^4.12.8",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260317.1",
     "@types/node": "^22.10.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "wrangler": "^4.76.0"
   }
 }

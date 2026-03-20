@@ -1,0 +1,13 @@
+name = "blanxer-mcp"
+main = "src/worker.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+TRANSPORT = "workers"
+
+# Optional: set BLANXER_API_KEY here for single-tenant mode
+# For multi-tenant, each agent passes their own key via X-Blanxer-Api-Key header
+
+# [dev]
+# port = 8787

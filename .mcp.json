@@ -1,10 +1,10 @@
 {
   "mcpServers": {
     "blanxer": {
-      "command": "node",
-      "args": ["/Users/prashant/Documents/BlanxerMCP/dist/index.js"],
-      "env": {
-        "BLANXER_API_KEY": "sk_652b9138aebd132f108cb75f695edf753e3c34c50f32f568wm_-0hb3"
+      "type": "http",
+      "url": "https://blanxer-mcp.prashant-phuyal-pp.workers.dev/mcp",
+      "headers": {
+        "X-Blanxer-Api-Key": "${BLANXER_API_KEY}"
       }
     }
   }

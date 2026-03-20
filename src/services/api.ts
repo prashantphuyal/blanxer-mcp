@@ -1,4 +1,4 @@
-import axios, { AxiosError } from "axios";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { API_BASE_URL } from "../constants.js";
 import type { AuthContext, AuthResponse } from "../types.js";
 
@@ -8,25 +8,27 @@ const authCache = new Map<string, AuthContext>();
 export async function resolveAuth(apiKey: string): Promise<AuthContext> {
   if (authCache.has(apiKey)) return authCache.get(apiKey)!;
 
-  const res = await axios.post<AuthResponse>(`${API_BASE_URL}/api-key/check`, { api_key: apiKey });
+  const res = await apiFetch<AuthResponse>("api-key/check", {
+    method: "POST",
+    body: JSON.stringify({ api_key: apiKey }),
+    requireAuth: false,
+  });
 
-  if (!res.data.success) throw new Error("Invalid Blanxer API key");
+  if (!res.success) throw new Error("Invalid Blanxer API key");
 
   const ctx: AuthContext = {
-    token: res.data.token,
-    storeId: res.data.store._id,
-    storeName: res.data.store.name,
-    subDomain: res.data.store.sub_domain,
+    token: res.token,
+    storeId: res.store._id,
+    storeName: res.store.name,
+    subDomain: res.store.sub_domain,
   };
 
   authCache.set(apiKey, ctx);
-  console.error(`[auth] Resolved store: ${ctx.storeName} (${ctx.storeId})`);
+  console.error(`[auth] Store: ${ctx.storeName} (${ctx.storeId})`);
   return ctx;
 }
 
-// ─── Per-request auth context (AsyncLocalStorage) ────────────────────────────
-import { AsyncLocalStorage } from "async_hooks";
-
+// ─── Per-request auth context ─────────────────────────────────────────────────
 const authStore = new AsyncLocalStorage<AuthContext>();
 
 export function runWithAuth<T>(ctx: AuthContext, fn: () => T): T {
@@ -39,7 +41,7 @@ export function getAuth(): AuthContext {
   return ctx;
 }
 
-// ─── Startup single-tenant mode (env var) ────────────────────────────────────
+// ─── Single-tenant startup init ───────────────────────────────────────────────
 let _defaultAuth: AuthContext | null = null;
 
 export async function initAuth(): Promise<AuthContext> {
@@ -53,14 +55,17 @@ export function getDefaultAuth(): AuthContext | null {
   return _defaultAuth;
 }
 
-// ─── Axios request helper ─────────────────────────────────────────────────────
-export async function apiRequest<T>(
-  endpoint: string,
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" = "GET",
-  data?: unknown,
-  params?: Record<string, unknown>,
-  requireAuth = true
-): Promise<T> {
+// ─── Core fetch helper (replaces axios — works in Node.js 18+ and Workers) ───
+interface FetchOptions {
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  body?: string;
+  params?: Record<string, unknown>;
+  requireAuth?: boolean;
+}
+
+async function apiFetch<T>(endpoint: string, opts: FetchOptions = {}): Promise<T> {
+  const { method = "GET", body, params, requireAuth = true } = opts;
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "Accept": "application/json",
@@ -70,37 +75,64 @@ export async function apiRequest<T>(
     headers["Authorization"] = `Bearer ${getAuth().token}`;
   }
 
-  const response = await axios({
-    method,
-    url: `${API_BASE_URL}/${endpoint}`,
-    data,
-    params,
-    timeout: 30000,
-    headers,
-  });
+  let url = `${API_BASE_URL}/${endpoint}`;
+  if (params) {
+    const qs = Object.entries(params)
+      .filter(([, v]) => v !== undefined && v !== null)
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+      .join("&");
+    if (qs) url += `?${qs}`;
+  }
 
-  return response.data as T;
+  const res = await fetch(url, { method, headers, body });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    let msg = "";
+    try { msg = (JSON.parse(text) as Record<string, unknown>)?.message as string ?? ""; } catch {}
+    throw new ApiError(res.status, msg || text);
+  }
+
+  return res.json() as Promise<T>;
 }
 
-// ─── Error formatter ──────────────────────────────────────────────────────────
+export async function apiRequest<T>(
+  endpoint: string,
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" = "GET",
+  data?: unknown,
+  params?: Record<string, unknown>,
+  requireAuth = true
+): Promise<T> {
+  return apiFetch<T>(endpoint, {
+    method,
+    body: data !== undefined ? JSON.stringify(data) : undefined,
+    params,
+    requireAuth,
+  });
+}
+
+// ─── Error types ──────────────────────────────────────────────────────────────
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export function handleApiError(error: unknown): string {
-  if (error instanceof AxiosError) {
-    if (error.response) {
-      const status = error.response.status;
-      const msg = (error.response.data as Record<string, unknown>)?.message ?? "";
-      switch (status) {
-        case 400: return `Error: Bad request. ${msg}`;
-        case 401: return "Error: Unauthorized. Token may have expired — the server will re-authenticate on the next request.";
-        case 403: return "Error: Permission denied for this resource.";
-        case 404: return "Error: Resource not found. Verify the ID is correct.";
-        case 422: return `Error: Validation failed. ${msg}`;
-        case 429: return "Error: Rate limit exceeded. Please wait before retrying.";
-        default:  return `Error: API request failed (${status}). ${msg}`;
-      }
+  if (error instanceof ApiError) {
+    switch (error.status) {
+      case 400: return `Error: Bad request. ${error.message}`;
+      case 401: return "Error: Unauthorized. Check your Blanxer API key.";
+      case 403: return "Error: Permission denied for this resource.";
+      case 404: return "Error: Resource not found. Verify the ID is correct.";
+      case 422: return `Error: Validation failed. ${error.message}`;
+      case 429: return "Error: Rate limit exceeded. Please wait before retrying.";
+      default:  return `Error: API request failed (${error.status}). ${error.message}`;
     }
-    if (error.code === "ECONNABORTED") return "Error: Request timed out.";
-    if (error.code === "ECONNREFUSED") return "Error: Could not connect to api.blanxer.com.";
-    return `Error: Network error — ${error.message}`;
+  }
+  if (error instanceof TypeError && String(error.message).includes("fetch")) {
+    return "Error: Could not connect to api.blanxer.com.";
   }
   return `Error: ${error instanceof Error ? error.message : String(error)}`;
 }
