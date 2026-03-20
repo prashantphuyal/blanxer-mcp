@@ -58,6 +58,25 @@ app.get("/health", (c) =>
   c.json({ status: "ok", server: "blanxer-ecommerce-mcp-server", version: "1.0.0" })
 );
 
+// SSE endpoint — MCP Streamable HTTP transport opens GET before sending POSTs
+app.get("/mcp", (c) => {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(": connected\n\n"));
+      // Keep the stream open; Cloudflare will close it when the client disconnects
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+});
+
 app.post("/mcp", async (c) => {
   const env = c.env;
 
@@ -109,7 +128,17 @@ app.post("/mcp", async (c) => {
     return c.json({ error: "Invalid JSON body" }, 400);
   }
 
-  // 4. Process MCP request within auth context
+  // 4. Notifications have no id and expect no response — return 202 immediately
+  if (
+    body !== null &&
+    typeof body === "object" &&
+    !Array.isArray(body) &&
+    !("id" in (body as Record<string, unknown>))
+  ) {
+    return new Response(null, { status: 202 });
+  }
+
+  // 5. Process MCP request within auth context
   return new Promise<Response>((resolve) => {
     runWithAuth(auth, async () => {
       const transport = new WorkersHttpTransport();
@@ -140,7 +169,7 @@ app.options("/mcp", (c) => {
   return new Response(null, {
     headers: {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Blanxer-Api-Key",
     },
   });
